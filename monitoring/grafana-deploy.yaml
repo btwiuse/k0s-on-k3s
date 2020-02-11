@@ -1,0 +1,59 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: grafana-deployment
+  name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      initContainers:
+      - image: latestarch/linux:latest # provides jq and curl
+        name: arch
+        workingDir: "/grafana/"
+        command:
+        - "/bin/bash"
+        - "-c"
+        args:
+        - |
+          git init .
+          git remote add origin https://github.com/conntroll/grafana
+          git pull origin master
+        volumeMounts:
+        - name: grafana-data
+          mountPath: "/grafana/"
+        securityContext:
+          runAsUser: 0
+      containers:
+      - image: grafana/grafana:latest
+        name: grafana
+        env:
+        - name: GF_PATHS_CONFIG
+          value: /etc/grafana/grafana.ini
+        - name: GF_PATHS_DATA
+          value: /grafana
+        workingDir: "/grafana/"
+        ports:
+        - containerPort: 3000
+          protocol: TCP
+        volumeMounts:
+        - mountPath: "/grafana"
+          name: grafana-data
+        - mountPath: "/etc/grafana"
+          name: config-volume
+        securityContext:
+          runAsUser: 0
+      volumes:
+      - name: grafana-data
+        emptyDir: {}
+      - name: config-volume
+        configMap:
+          name: grafana-config   
