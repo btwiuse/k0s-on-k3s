@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: staging-web
+  name: staging-web-caddyfile
+data:
+  Caddyfile: |-
+    :8000 {
+      root .
+    }
+
+---
+# Kubernetes Service & Deployment file
+apiVersion: v1
+kind: Service
+metadata:
+  name: staging-web
+spec:
+  type: ClusterIP
+  selector:
+    app: staging-web
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: staging-web
+  labels:
+    app: staging-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: staging-web
+  template:
+    metadata:
+      labels:
+        app: staging-web
+    spec:
+      containers:
+      - name: site-builder
+        image: node # golang #latestarch/linux:stable
+        command: 
+        - "/bin/bash"
+        - "-c"
+        args: 
+        - |
+          apt update; apt install -y zip
+          git init
+          git remote add origin https://github.com/conntroll/conntroll.github.io
+          while :; do 
+            git pull origin src
+            git checkout -f src
+            npm install
+            make
+            make chrome
+          done
+        volumeMounts:
+        - name: site-data
+          mountPath: /site-data
+        workingDir: /site-data
+      - image: abiosoft/caddy
+        name: staging-web
+        command:
+        - "caddy"
+        args:
+        - "-conf"
+        - "/etc/Caddyfile"
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - name: caddy-config
+          mountPath: /etc/Caddyfile
+          subPath: Caddyfile
+        - name: site-data
+          mountPath: /site-data
+        workingDir: /site-data
+      volumes:
+        - name: caddy-config
+          configMap:
+            name: staging-web-caddyfile
+            items:
+              - key: Caddyfile
+                path: Caddyfile
+                mode: 0644
+        - name: site-data
+          emptyDir: {}

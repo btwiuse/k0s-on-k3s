@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: web
+  name: web-caddyfile
+data:
+  Caddyfile: |-
+    :8000 {
+      proxy / https://conntroll.github.io {
+      }
+      proxy /grafana http://k0s.io:3000 {
+      }
+    }
+
+---
+# Kubernetes Service & Deployment file
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  type: ClusterIP
+  selector:
+    app: web
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels:
+    app: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - image: abiosoft/caddy
+        name: web
+        command:
+        - caddy
+        args:
+        - -conf
+        - /etc/Caddyfile
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /etc/Caddyfile
+          name: caddy-config
+          subPath: Caddyfile
+        env:
+        - name: redeploy
+          value: "asdf"
+      volumes:
+        - name: caddy-config
+          configMap:
+            name: web-caddyfile
+            items:
+              - key: Caddyfile
+                path: Caddyfile
+                mode: 0644

@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: staging-hub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: staging-hub
+  template:
+    metadata:
+      labels:
+        app: staging-hub
+    spec:
+      containers:
+      - name: staging-hub
+        image: btwiuse/k0s:staging
+        args:
+        - hub
+        ports:
+        - containerPort: 8000
+        imagePullPolicy: Always
+        env:
+        - name: redeploy
+          value: "asd"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: staging-hub
+spec:
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: staging-hub
