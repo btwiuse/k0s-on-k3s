@@ -1,0 +1,99 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: prometheus-deployment
+  name: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - image: latestarch/linux:latest # provides jq and curl
+        name: arch
+        workingDir: "/common/"
+        command:
+        - "/bin/bash"
+        - "-c"
+        args:
+        - |
+          #!/usr/bin/env bash
+          get_hub(){
+            echo '{"targets": ["hub.k0s.io"], "labels": {"job": "__hub__", "__metrics_path__": "/api/metrics"}}'
+          }
+
+          get_agents(){
+            curl -s https://hub.k0s.io/api/agents/list \
+            | jq -c '.[]|{"targets": ["hub.k0s.io"], "labels": {"job": "\(.name)", "__metrics_path__": "/api/agent/\(.id)/metrics"}}'
+          }
+
+          update_targets(){
+            src=/tmp/${targets_file}
+            dst=./${targets_file}
+            (get_hub && get_agents) | jq -s . >$src;
+            if ! diff ${src} ${dst} &>/dev/null; then
+              cp -v ${src} ${dst}
+              cat ${dst} | jq -c .[]
+            fi
+          }
+
+          update_targets_loop(){
+            while :; do update_targets; sleep 2; done
+          }
+
+          main(){
+            targets_file="prometheus_scrape_targets.json"
+            update_targets_loop
+          }
+
+          main "$@"
+        volumeMounts:
+        - mountPath: "/common/"
+          name: working-dir
+        securityContext:
+          runAsUser: 0
+      - image: prom/prometheus
+        name: prometheus
+        workingDir: "/common/"
+        command:
+        - "/bin/prometheus"
+        args:
+        - "--config.file=/etc/prometheus/prometheus.yml"
+        - "--storage.tsdb.path=/prometheus"
+        - "--storage.tsdb.retention.time=7d"
+        - "--web.enable-lifecycle"
+        - "--web.external-url=https://k0s.io/prometheus"
+        - "--web.route-prefix=/prometheus"
+        ports:
+        - containerPort: 9090
+          protocol: TCP
+        volumeMounts:
+        - mountPath: "/common/"
+          name: working-dir
+        - mountPath: "/prometheus"
+          name: prometheus-data
+        - mountPath: "/etc/prometheus"
+          name: config-volume
+#       resources:
+#         requests:
+#           cpu: 100m
+#           memory: 100Mi
+#         limits:
+#           cpu: 500m
+#           memory: 2500Mi
+#     serviceAccountName: prometheus    
+      volumes:
+      - name: working-dir
+        emptyDir: {}
+      - name: prometheus-data
+        emptyDir: {}
+      - name: config-volume
+        configMap:
+          name: prometheus-config   
