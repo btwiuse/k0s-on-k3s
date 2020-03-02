@@ -1,0 +1,15 @@
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: staging-certificate
+  namespace: default
+spec:
+  commonName: staging.k0s.io
+  secretName: staging.k0s.io
+  issuerRef:
+    kind: ClusterIssuer
+    name: staging-letsencrypt
+  # name: letsencrypt
+  dnsNames:
+  - staging.k0s.io
+  - staging2.k0s.io

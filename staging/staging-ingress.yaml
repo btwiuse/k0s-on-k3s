@@ -1,0 +1,29 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: staging-ingress
+  annotations:
+    ingress.kubernetes.io/whitelist-x-forwarded-for: "true"
+    # traefik.ingress.kubernetes.io/whitelist-source-range: "0.0.0.0/1,128.0.0.0/2,192.0.0.0/3,224.0.0.0/4"
+    kubernetes.io/ingress.class: traefik
+    # add an annotation indicating the issuer to use.
+    cert-manager.io/cluster-issuer: letsencrypt
+  # cert-manager.io/cluster-issuer: staging-letsencrypt
+    cert-manager.io/acme-challenge-type: http01
+spec:
+  rules:
+  - host: staging.k0s.io
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: staging-web
+          servicePort: 80
+      - path: /api
+        backend:
+          serviceName: staging-hub
+          servicePort: 80
+  tls:
+  - hosts:
+    - staging.k0s.io
+    secretName: staging.k0s.io
