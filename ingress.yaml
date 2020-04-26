@@ -57,6 +57,9 @@ spec:
     - prometheus-postgresql-adapter.k0s.io
     secretName: prometheus-postgresql-adapter.k0s.io
   - hosts:
+    - get.k0s.io
+    secretName: get.k0s.io
+  - hosts:
     - hub.k0s.io
     secretName: hub.k0s.io
   - hosts:
