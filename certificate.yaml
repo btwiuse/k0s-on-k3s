@@ -2,19 +2,14 @@ apiVersion: cert-manager.io/v1alpha2
 kind: Certificate
 metadata:
   name: k0s
-  namespace: default
 spec:
   secretName: k0s
-  commonName: '*.k0s.io'
   dnsNames:
+  - k0s.io
   - '*.k0s.io'
-    # NOTE: wildcard certificate requires dns01
-# acme:
-#   config:
-#   - http01:
-#       ingressClass: traefik
-#     domains:
-#     - '*.k0s.io'
   issuerRef:
-    kind: ClusterIssuer
     name: letsencrypt
+    # We can reference ClusterIssuers by changing the kind here.
+    # The default value is Issuer (i.e. a locally namespaced Issuer)
+    kind: ClusterIssuer
+    group: cert-manager.io

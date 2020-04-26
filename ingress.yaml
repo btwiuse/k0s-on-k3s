@@ -5,11 +5,12 @@ metadata:
   annotations:
     ingress.kubernetes.io/whitelist-x-forwarded-for: "true"
     # traefik.ingress.kubernetes.io/whitelist-source-range: "0.0.0.0/1,128.0.0.0/2,192.0.0.0/3,224.0.0.0/4"
-    kubernetes.io/ingress.class: traefik
+    # kubernetes.io/ingress.class: traefik
+    kubernetes.io/ingress.class: nginx
     # add an annotation indicating the issuer to use.
-    cert-manager.io/cluster-issuer: letsencrypt
+  # cert-manager.io/cluster-issuer: letsencrypt
   # cert-manager.io/cluster-issuer: staging-letsencrypt
-    cert-manager.io/acme-challenge-type: http01
+  # cert-manager.io/acme-challenge-type: http01
 spec:
   rules:
   - host: k0s.io
@@ -55,13 +56,7 @@ spec:
   tls:
   - hosts:
     - prometheus-postgresql-adapter.k0s.io
-    secretName: prometheus-postgresql-adapter.k0s.io
-  - hosts:
     - get.k0s.io
-    secretName: get.k0s.io
-  - hosts:
     - hub.k0s.io
-    secretName: hub.k0s.io
-  - hosts:
     - k0s.io
-    secretName: k0s.io
+    secretName: k0s
