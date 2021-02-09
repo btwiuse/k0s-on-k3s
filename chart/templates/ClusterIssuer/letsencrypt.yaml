@@ -13,12 +13,10 @@ spec:
     privateKeySecretRef:
       name: letsencrypt
     # Enable HTTP01 validations
-#   http01: {}
     solvers:
     - http01:
         ingress:
-        # class: traefik
-          class: nginx
+          class: {{ .Values.ingress.class }}
       selector: {}
     - dns01:
         digitalocean:
