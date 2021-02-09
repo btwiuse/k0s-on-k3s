@@ -8,9 +8,9 @@ metadata:
     # kubernetes.io/ingress.class: traefik
     kubernetes.io/ingress.class: nginx
     # add an annotation indicating the issuer to use.
-  # cert-manager.io/cluster-issuer: letsencrypt
+    cert-manager.io/cluster-issuer: letsencrypt
   # cert-manager.io/cluster-issuer: staging-letsencrypt
-  # cert-manager.io/acme-challenge-type: http01
+    cert-manager.io/acme-challenge-type: dns01
 spec:
   rules:
   - host: k0s.io
@@ -46,16 +46,8 @@ spec:
         backend:
           serviceName: hub
           servicePort: 80
-  - host: prometheus-postgresql-adapter.k0s.io
-    http:
-      paths:
-      - path: /
-        backend:
-          serviceName: prometheus-postgresql-adapter
-          servicePort: 80
   tls:
   - hosts:
-    - prometheus-postgresql-adapter.k0s.io
     - get.k0s.io
     - hub.k0s.io
     - k0s.io
