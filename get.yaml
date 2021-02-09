@@ -14,7 +14,8 @@ data:
 
     :80 {
       route /* {
-        reverse_proxy https://conntroll.github.io/releases {
+        rewrite * /releases{path}
+        reverse_proxy https://conntroll.github.io {
           header_up Host {http.reverse_proxy.upstream.hostport}
         }
       }
