@@ -6,10 +6,20 @@ metadata:
   name: web-caddyfile
 data:
   Caddyfile: |-
-    :8000 {
-      proxy / https://conntroll.github.io {
+    {
+      http_port 80
+      debug
+      admin off
+    }
+
+    :80 {
+      route /grafana* {
+        reverse_proxy http://k0s.io:3000
       }
-      proxy /grafana http://k0s.io:3000 {
+      route /* {
+        reverse_proxy https://conntroll.github.io {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
       }
     }
 
@@ -26,7 +36,7 @@ spec:
   ports:
   - protocol: TCP
     port: 80
-    targetPort: 8000
+    targetPort: 80
 
 ---
 apiVersion: apps/v1
@@ -46,15 +56,16 @@ spec:
         app: web
     spec:
       containers:
-      - image: abiosoft/caddy
+      - image: caddy
         name: web
         command:
         - caddy
         args:
-        - -conf
+        - run
+        - --config
         - /etc/Caddyfile
         ports:
-        - containerPort: 8000
+        - containerPort: 80
           name: http
           protocol: TCP
         volumeMounts:
