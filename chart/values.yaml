@@ -2,4 +2,4 @@ ingress:
   class: traefik # nginx
 
 digitalocean:
-  access_token: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  access_token: deadbeefcafebabdeadbeefcafebabdeadbeefcafebabeeedeadbeefcafebabe
