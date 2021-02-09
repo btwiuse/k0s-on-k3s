@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: caddy-auth-portal
+  namespace: default
+spec:
+  ports:
+  - name: caddy-auth-portal
+    port: 80
+    protocol: TCP
+    targetPort: 2020
+  selector:
+    app: caddy-auth-portal
+  type: ClusterIP

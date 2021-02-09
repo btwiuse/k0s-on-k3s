@@ -1,0 +1,221 @@
+# Source: prometheus/templates/server/cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: caddyfile
+  namespace: default
+data:
+  users.json: |
+    {
+      "revision": 1,
+      "users": [
+        {
+          "id": "cd5f647a-cc04-4ae2-9d0a-2d5e9b95cf98",
+          "username": "admin",
+          "email_addresses": [
+            {
+              "address": "navigaid@gmail.com",
+              "domain": "chassis.k0s.io"
+            }
+          ],
+          "passwords": [
+            {
+              "purpose": "generic",
+              "type": "bcrypt",
+              "hash": "$2a$10$xHWm0hMXePP4JUgsgpOINOpph.n.zReJlwPfdp0/jnCqb16Pb4R56",
+              "cost": 10,
+              "expired_at": "0001-01-01T00:00:00Z",
+              "created_at": "2020-05-05T18:47:51.513552501Z",
+              "disabled_at": "0001-01-01T00:00:00Z"
+            }
+          ],
+          "created": "2020-05-05T18:47:51.513552066Z",
+          "last_modified": "2020-05-05T18:47:51.513552175Z",
+          "roles": [
+            {
+              "name": "superadmin"
+            }
+          ]
+        }
+      ]
+    }
+  Caddyfile: |
+    {
+      http_port 2020
+      debug
+      admin off
+    }
+
+    :2020 {
+      route /auth* {
+        auth_portal {
+          path /auth
+          cookie_domain chassis.k0s.io
+          backends {
+            local_backend {
+              method local
+              path /etc/caddy/users.json
+              realm local
+            }
+          }
+          jwt {
+            token_name access_token
+            token_secret 0e2fdcf8-6868-41a7-884b-7308795fc286
+          # token_lifetime 3600
+            token_lifetime 31622400 # a year
+          }
+          ui {
+            links {
+            # "Version (Auth)" /auth-version
+            # "Version (Noauth)" /version
+              "Management Console" /_/
+            # "settings" /auth/settings
+            # "whoami" /auth/whoami
+
+              "Monitoring / Grafana" /monitoring/grafana/
+              "Monitoring / Prometheus" /monitoring/prometheus/
+            # "Monitoring / Alertmanager" /monitoring/alertmanager/
+              "Monitoring / ELK" /monitoring/elk/
+            }
+          }
+        }
+      }
+
+      route /mnt/_/ {
+        jwt {
+          primary yes
+          trusted_tokens {
+            static_secret {
+              token_name access_token
+              token_secret 0e2fdcf8-6868-41a7-884b-7308795fc286
+            }
+          }
+          auth_url /auth
+          allow roles anonymous guest admin
+          allow roles superadmin
+        }
+        uri strip_prefix /mnt
+        reverse_proxy chassis:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /mnt/* {
+        reverse_proxy chassis:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /api/version {
+        reverse_proxy hub:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /api/rpc {
+        reverse_proxy hub:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /api/fs {
+        reverse_proxy hub:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /api/socks5 {
+        reverse_proxy hub:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /api/redir {
+        reverse_proxy hub:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /api/metrics {
+        reverse_proxy hub:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /api/k16s {
+        reverse_proxy hub:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /api/doh {
+        reverse_proxy hub:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /api/terminal {
+        reverse_proxy hub:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /api/* {
+        jwt
+        reverse_proxy hub:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /api/agents/* {
+        reverse_proxy hub:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /monitoring/grafana* {
+        jwt
+        reverse_proxy grafana:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /monitoring/prometheus* {
+        jwt
+        reverse_proxy prometheus:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /monitoring/elk* {
+        jwt
+        uri strip_prefix /monitoring/elk
+        reverse_proxy kibana-kibana.elk:5601
+      }
+
+      route /version* {
+        respond * "1.0.0 (noauth)" 200
+      }
+
+      route /auth-version* {
+        jwt
+        respond * "1.0.0 (auth)" 200
+      }
+
+      route /version* {
+        respond * "1.0.0 (noauth)" 200
+      }
+
+    # route /monitoring/k0s/* {
+    #   uri strip_prefix /monitoring/k0s
+    #   reverse_proxy web:80
+    # }
+
+      route /* {
+        reverse_proxy web:80
+      }
+
+      route {
+        redir https://{hostport}/auth 302
+      }
+    }

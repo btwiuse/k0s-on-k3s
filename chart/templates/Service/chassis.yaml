@@ -1,0 +1,13 @@
+# Source: k0s/templates/chassis.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: chassis
+spec:
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: chassis

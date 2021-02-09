@@ -1,0 +1,31 @@
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: caddy-auth-portal
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: caddy-auth-portal
+  replicas: 1 # tells deployment to run 2 pods matching the template
+  template:
+    metadata:
+      labels:
+        app: caddy-auth-portal
+    spec:
+      containers:
+      - name: caddy-auth-portal
+        image: btwiuse/caddy:ldap2
+        imagePullPolicy: IfNotPresent
+        command:
+        - /usr/local/bin/caddy
+        - run
+        - -config
+        - /etc/caddy/Caddyfile
+        volumeMounts:
+        - name: caddyfile
+          mountPath: /etc/caddy/
+      volumes:
+      - name: caddyfile
+        configMap:
+          name: caddyfile

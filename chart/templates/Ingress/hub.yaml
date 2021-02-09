@@ -9,24 +9,27 @@ metadata:
   # cert-manager.io/acme-challenge-type: http01
 spec:
   rules:
-  - host: k0s.io
+  - host: chassis.k0s.io
     http:
       paths:
       - path: /
         backend:
-          serviceName: web
+          serviceName: caddy-auth-portal
           servicePort: 80
       - path: /k0s
         backend:
           serviceName: import-redir
           servicePort: 80
-      - path: /grafana
+  - host: k0s.io
+    http:
+      paths:
+      - path: /
         backend:
-          serviceName: grafana
+          serviceName: caddy-auth-portal
           servicePort: 80
-      - path: /prometheus
+      - path: /k0s
         backend:
-          serviceName: prometheus
+          serviceName: import-redir
           servicePort: 80
   - host: get.k0s.io
     http:
@@ -44,6 +47,7 @@ spec:
           servicePort: 80
   tls:
   - hosts:
+    - chassis.k0s.io
     - get.k0s.io
     - hub.k0s.io
     - k0s.io
