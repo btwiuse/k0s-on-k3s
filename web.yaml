@@ -13,9 +13,6 @@ data:
     }
 
     :80 {
-      route /grafana* {
-        reverse_proxy http://k0s.io:3000
-      }
       route /* {
         reverse_proxy https://conntroll.github.io {
           header_up Host {http.reverse_proxy.upstream.hostport}
