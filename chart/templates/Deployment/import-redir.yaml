@@ -1,3 +1,4 @@
+# Source: k0s/templates/import-redir.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,16 +23,3 @@ spec:
           - 'go get rsc.io/go-import-redirector; go-import-redirector k0s.io/k0s https://github.com/btwiuse/k0s'
         ports:
         - containerPort: 80
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: import-redir
-spec:
-  ports:
-  - port: 80
-    targetPort: 80
-    protocol: TCP
-    name: http
-  selector:
-    app: import-redir

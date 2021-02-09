@@ -1,0 +1,23 @@
+# Source: k0s/templates/get.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: get
+  name: get-caddyfile
+data:
+  Caddyfile: |-
+    {
+      http_port 80
+      debug
+      admin off
+    }
+
+    :80 {
+      route /* {
+        rewrite * /releases{path}
+        reverse_proxy https://conntroll.github.io {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+    }

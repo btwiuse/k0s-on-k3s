@@ -1,0 +1,14 @@
+# Source: k0s/templates/web.yaml
+# Kubernetes Service & Deployment file
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  type: ClusterIP
+  selector:
+    app: web
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80

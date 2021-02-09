@@ -1,3 +1,4 @@
+# Source: k0s/templates/hub.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -23,16 +24,3 @@ spec:
         env:
         - name: redeploy
           value: "asdf"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: hub
-spec:
-  ports:
-  - port: 80
-    targetPort: 8000
-    protocol: TCP
-    name: http
-  selector:
-    app: hub

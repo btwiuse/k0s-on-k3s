@@ -1,4 +1,2 @@
-ingress:
-  enabled: true
-  class: nginx # traefik
-
+digitalocean:
+  access_token: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

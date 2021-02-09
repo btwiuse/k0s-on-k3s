@@ -1,0 +1,14 @@
+# Source: k0s/templates/get.yaml
+# Kubernetes Service & Deployment file
+apiVersion: v1
+kind: Service
+metadata:
+  name: get
+spec:
+  type: ClusterIP
+  selector:
+    app: get
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
