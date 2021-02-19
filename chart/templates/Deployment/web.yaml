@@ -16,14 +16,8 @@ spec:
         app: web
     spec:
       containers:
-      - image: caddy
+      - image: btwiuse/k0sio
         name: web
-        command:
-        - caddy
-        args:
-        - run
-        - --config
-        - /etc/Caddyfile
         ports:
         - containerPort: 80
           name: http
