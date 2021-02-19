@@ -212,6 +212,20 @@ data:
     # }
 
       route /* {
+        # https://caddy.community/t/vanity-go-import-paths-for-caddy-2/9814
+        # https://caddyserver.com/docs/caddyfile/matchers
+        @goget query go-get=1
+        respond @goget `<!DOCTYPE html>
+                        <html>
+                        <head>
+                        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+                        <meta name="go-import" content="k0s.io/k0s git https://github.com/btwiuse/k0s">
+                        <meta http-equiv="refresh" content="0; url=https://pkg.go.dev/k0s.io/k0s">
+                        </head>
+                        <body>
+                        Redirecting to docs at <a href="https://pkg.go.dev/k0s.io/k0s">pkg.go.dev/k0s.io/k0s</a>...
+                        </body>
+                        </html>`
         reverse_proxy web:80
       }
 

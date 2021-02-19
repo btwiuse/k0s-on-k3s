@@ -15,10 +15,9 @@ spec:
     spec:
       containers:
       - name: caddy-auth-portal
-        image: btwiuse/caddy:ldap2
-        imagePullPolicy: IfNotPresent
-        command:
-        - /usr/local/bin/caddy
+        image: btwiuse/k0s
+        args:
+        - caddy
         - run
         - -config
         - /etc/caddy/Caddyfile

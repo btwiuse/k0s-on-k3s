@@ -16,20 +16,12 @@ spec:
         backend:
           serviceName: caddy-auth-portal
           servicePort: 80
-      - path: /k0s
-        backend:
-          serviceName: import-redir
-          servicePort: 80
   - host: k0s.io
     http:
       paths:
       - path: /
         backend:
           serviceName: caddy-auth-portal
-          servicePort: 80
-      - path: /k0s
-        backend:
-          serviceName: import-redir
           servicePort: 80
   - host: get.k0s.io
     http:
