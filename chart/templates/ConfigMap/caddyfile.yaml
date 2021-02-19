@@ -219,11 +219,11 @@ data:
                         <html>
                         <head>
                         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-                        <meta name="go-import" content="k0s.io/k0s git https://github.com/btwiuse/k0s">
-                        <meta http-equiv="refresh" content="0; url=https://pkg.go.dev/k0s.io/k0s">
+                        <meta name="go-import" content="k0s.io git https://github.com/btwiuse/k0s">
+                        <meta http-equiv="refresh" content="0; url=https://pkg.go.dev/k0s.io">
                         </head>
                         <body>
-                        Redirecting to docs at <a href="https://pkg.go.dev/k0s.io/k0s">pkg.go.dev/k0s.io/k0s</a>...
+                        Redirecting to docs at <a href="https://pkg.go.dev/k0s.io">pkg.go.dev/k0s.io</a>...
                         </body>
                         </html>`
         reverse_proxy web:80
