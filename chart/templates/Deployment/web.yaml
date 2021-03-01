@@ -22,18 +22,6 @@ spec:
         - containerPort: 80
           name: http
           protocol: TCP
-        volumeMounts:
-        - mountPath: /etc/Caddyfile
-          name: caddy-config
-          subPath: Caddyfile
         env:
         - name: redeploy
           value: "asdf"
-      volumes:
-        - name: caddy-config
-          configMap:
-            name: web-caddyfile
-            items:
-              - key: Caddyfile
-                path: Caddyfile
-                mode: 0644
