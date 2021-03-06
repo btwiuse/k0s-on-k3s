@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
@@ -27,6 +28,21 @@ spec:
       - name: caddyfile
         configMap:
           name: web-caddyfile
+---
+# Source: k0s/templates/web.yaml
+# Kubernetes Service & Deployment file
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-caddy
+spec:
+  type: ClusterIP
+  selector:
+    app: web-caddy
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
 ---
 # Source: prometheus/templates/server/cm.yaml
 apiVersion: v1
