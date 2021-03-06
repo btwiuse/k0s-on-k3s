@@ -15,12 +15,12 @@ data:
       - files:
         - '/common/prometheus_scrape_targets.json'
 
-    remote_write:
-      - url: "http://prometheus-postgresql-adapter/write"
+#   remote_write:
+#     - url: "http://prometheus-postgresql-adapter/write"
 
-    remote_read:
-      - url: "http://prometheus-postgresql-adapter/read"
-       #read_recent: true
+#   remote_read:
+#     - url: "http://prometheus-postgresql-adapter/read"
+#      #read_recent: true
 
 #   - job_name: 'kubernetes-apiservers'
 #     kubernetes_sd_configs:
