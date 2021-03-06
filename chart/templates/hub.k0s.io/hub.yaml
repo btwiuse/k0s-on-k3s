@@ -1,4 +1,31 @@
 # Source: k0s/templates/hub.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hub
+  template:
+    metadata:
+      labels:
+        app: hub
+    spec:
+      containers:
+      - name: hub
+        image: btwiuse/k0s:latest
+        args:
+        - hub
+        ports:
+        - containerPort: 8000
+        imagePullPolicy: Always
+        env:
+        - name: redeploy
+          value: "asdf"
+---
+# Source: k0s/templates/hub.yaml
 apiVersion: v1
 kind: Service
 metadata:
