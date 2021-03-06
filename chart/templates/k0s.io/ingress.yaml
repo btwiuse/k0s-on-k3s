@@ -14,7 +14,7 @@ spec:
       paths:
       - path: /
         backend:
-          serviceName: caddy-auth-portal
+          serviceName: web-caddy
           servicePort: 80
   tls:
   - hosts:

@@ -1,0 +1,70 @@
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: web-caddy
+spec:
+  selector:
+    matchLabels:
+      app: web-caddy
+  replicas: 1 # tells deployment to run 2 pods matching the template
+  template:
+    metadata:
+      labels:
+        app: web-caddy
+    spec:
+      containers:
+      - name: web-caddy
+        image: btwiuse/k0s
+        args:
+        - caddy
+        - run
+        - -config
+        - /etc/caddy/Caddyfile
+        volumeMounts:
+        - name: caddyfile
+          mountPath: /etc/caddy/
+      volumes:
+      - name: caddyfile
+        configMap:
+          name: web-caddyfile
+---
+# Source: prometheus/templates/server/cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-caddyfile
+data:
+  Caddyfile: |
+    {
+      http_port 80
+      debug
+      admin off
+    }
+
+    :80 {
+
+      route /api/* {
+        reverse_proxy hub:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /* {
+        # https://caddy.community/t/vanity-go-import-paths-for-caddy-2/9814
+        # https://caddyserver.com/docs/caddyfile/matchers
+        @goget query go-get=1
+        respond @goget `<!DOCTYPE html>
+                        <html>
+                        <head>
+                        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+                        <meta name="go-import" content="k0s.io git https://github.com/btwiuse/k0s">
+                        <meta http-equiv="refresh" content="0; url=https://pkg.go.dev/k0s.io">
+                        </head>
+                        <body>
+                        Redirecting to docs at <a href="https://pkg.go.dev/k0s.io">pkg.go.dev/k0s.io</a>...
+                        </body>
+                        </html>`
+        reverse_proxy web:80
+      }
+
+    }
