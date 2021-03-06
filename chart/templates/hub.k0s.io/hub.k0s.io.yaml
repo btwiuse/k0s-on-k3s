@@ -1,0 +1,22 @@
+# Source: k0s/templates/ingress.yaml
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: hub.k0s.io
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.ingress.class }}
+  # cert-manager.io/cluster-issuer: letsencrypt
+  # cert-manager.io/acme-challenge-type: http01
+spec:
+  rules:
+  - host: hub.k0s.io
+    http:
+      paths:
+      - path: /api
+        backend:
+          serviceName: hub
+          servicePort: 80
+  tls:
+  - hosts:
+    - hub.k0s.io
+    secretName: k0s

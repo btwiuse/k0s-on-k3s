@@ -1,0 +1,22 @@
+# Source: k0s/templates/ingress.yaml
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: k0s.io
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.ingress.class }}
+  # cert-manager.io/cluster-issuer: letsencrypt
+  # cert-manager.io/acme-challenge-type: http01
+spec:
+  rules:
+  - host: k0s.io
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: caddy-auth-portal
+          servicePort: 80
+  tls:
+  - hosts:
+    - k0s.io
+    secretName: k0s
