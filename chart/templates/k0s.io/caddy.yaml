@@ -44,7 +44,7 @@ data:
     :80 {
 
       route /api/* {
-        reverse_proxy hub:80 {
+        reverse_proxy web-hub:80 {
           header_up Host {http.reverse_proxy.upstream.hostport}
         }
       }

@@ -16,6 +16,10 @@ spec:
         backend:
           serviceName: web-caddy
           servicePort: 80
+      - path: /api
+        backend:
+          serviceName: web-hub
+          servicePort: 80
   tls:
   - hosts:
     - k0s.io
