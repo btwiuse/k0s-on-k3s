@@ -41,12 +41,12 @@ data:
     }
   Caddyfile: |
     {
-      http_port 2020
+      http_port 80
       debug
       admin off
     }
 
-    :2020 {
+    :80 {
       route /auth* {
         auth_portal {
           path /auth
