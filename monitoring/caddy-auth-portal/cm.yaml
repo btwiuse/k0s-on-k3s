@@ -1,0 +1,133 @@
+# Source: prometheus/templates/server/cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: caddyfile
+data:
+  # admin password is op5naeZai2aizech
+  users.json: |
+    {
+      "revision": 1,
+      "users": [
+        {
+          "id": "cd5f647a-cc04-4ae2-9d0a-2d5e9b95cf98",
+          "username": "admin",
+          "email_addresses": [
+            {
+              "address": "admin@k16s.io",
+              "domain": "k16s.io"
+            }
+          ],
+          "passwords": [
+            {
+              "purpose": "generic",
+              "type": "bcrypt",
+              "hash": "$2a$10$1UaVy6oRa8zH1wCUGhCUKOd968mLGIJO6Pd5hFkutyJQjsF8ep3cC",
+              "cost": 10,
+              "expired_at": "0001-01-01T00:00:00Z",
+              "created_at": "2020-05-05T18:47:51.513552501Z",
+              "disabled_at": "0001-01-01T00:00:00Z"
+            }
+          ],
+          "created": "2020-05-05T18:47:51.513552066Z",
+          "last_modified": "2020-05-05T18:47:51.513552175Z",
+          "roles": [
+            {
+              "name": "superadmin"
+            }
+          ]
+        }
+      ]
+    }
+  Caddyfile: |
+    {
+      http_port 80
+      debug
+      admin off
+    }
+
+    :80 {
+      route /auth* {
+        auth_portal {
+          path /auth
+	  backends {
+	    local_backend {
+	      method local
+	      path /etc/caddy/users.json
+	      realm local
+	    }
+	  }
+          cookie_domain k16s.io
+          ui {
+            links {
+            # "Version (Auth)" /auth-version
+            # "Version (Noauth)" /version
+            # "Management Console" /_/
+            # "settings" /auth/settings
+            # "whoami" /auth/whoami
+
+            # "Development / JupyterLab" https://jupyter.milvzn.com target_blank
+            # "Development / Code" https://code.milvzn.com target_blank
+            # "VCS / GitLab" https://git.milvai.cn target_blank
+
+            # "Build / Jenkins" https://jenkins.milvzn.com target_blank
+            # "Build / Harbor" https://harbor.milvzn.com target_blank
+            # "Build / Charts" https://chart.milvzn.com target_blank
+
+            # "Messaging / Mattermost" https://mattermost.milvzn.com target_blank
+
+            # "Issues / Jira" https://jira.milvzn.com target_blank
+
+            # "Documentation / Redoc" https://redoc.milvzn.com target_blank
+            # "Documentation / Confluence" https://confluence.milvzn.com target_blank
+
+            # "Deploy / Rancher" https://rancher.milvzn.com target_blank
+            # "Deploy / Portainer" https://portainer.milvzn.com target_blank
+
+              "Monitoring / Grafana" /monitoring/grafana/
+              "Monitoring / Prometheus" /monitoring/prometheus/
+            # "Monitoring / Alertmanager" /monitoring/alertmanager/
+              "Monitoring / ELK" /monitoring/elk/
+            }
+          }
+        }
+      }
+
+      route /monitoring/grafana* {
+        reverse_proxy grafana:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /monitoring/prometheus* {
+        reverse_proxy prometheus:80 {
+          header_up Host {http.reverse_proxy.upstream.hostport}
+        }
+      }
+
+      route /monitoring/elk* {
+        uri strip_prefix /monitoring/elk
+        reverse_proxy kibana-kibana.elk:5601
+      }
+
+      route /version* {
+        respond * "1.0.0 (noauth)" 200
+      }
+
+      route /auth-version* {
+        respond * "1.0.0 (auth)" 200
+      }
+
+      route /version* {
+        respond * "1.0.0 (noauth)" 200
+      }
+
+      route /monitoring/k0s/* {
+        uri strip_prefix /monitoring/k0s
+        reverse_proxy web:80
+      }
+
+      route {
+        redir https://{hostport}/auth 302
+      }
+    }
