@@ -69,8 +69,8 @@ spec:
         - "--storage.tsdb.path=/prometheus"
         - "--storage.tsdb.retention.time=7d"
         - "--web.enable-lifecycle"
-        - "--web.external-url=https://k16s.io/prometheus"
-        - "--web.route-prefix=/prometheus"
+        - "--web.external-url=http://localhost:9090/monitoring/prometheus"
+        - "--web.route-prefix=/monitoring/prometheus"
         ports:
         - containerPort: 9090
           protocol: TCP

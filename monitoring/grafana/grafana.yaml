@@ -1,0 +1,265 @@
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: grafana
+  replicas: 1 # tells deployment to run 2 pods matching the template
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      initContainers:
+      - name: init-populate-kubectl
+        image: latestarch/linux
+        command:
+        - /bin/sh
+        - -c
+        - |
+          cp `which kubectl` /emptydir/kubectl
+        volumeMounts:
+        - mountPath: /emptydir
+          name: emptydir
+        - mountPath: /powerlaw-storage
+          name: powerlaw-storage
+
+      - name: init-populate-emptydir
+        image: harbor.milvzn.com/public/ympl
+        command:
+        - /bin/sh
+        - -c
+        - |
+          mkdir -p /powerlaw-storage/var/mounthistory
+          ( date && env && echo ) >> /powerlaw-storage/var/mounthistory/log
+          cp `which yj` /emptydir/yj
+        volumeMounts:
+        - mountPath: /emptydir
+          name: emptydir
+        - mountPath: /powerlaw-storage
+          name: powerlaw-storage
+
+      - name: grafana-chown-data
+        image: "busybox:1.31.1"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+        command: ["chown", "-R", "472:472", "/var/lib/grafana"]
+        volumeMounts:
+        - name: grafana-storage
+          mountPath: "/var/lib/grafana"
+
+      - name: grafana-populate-datasources
+        image: "kiwigrid/k8s-sidecar:1.1.0"
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: METHOD
+          value: LIST
+        - name: LABEL
+          value: "grafana_datasource"
+        - name: FOLDER
+          value: "/etc/grafana/provisioning/datasources" # mount path
+        - name: RESOURCE
+          value: "both" # configmap or secret
+        volumeMounts:
+        - name: grafana-datasources-volume
+          mountPath: "/etc/grafana/provisioning/datasources"
+
+      - name: grafana-populate-notifiers
+        image: "kiwigrid/k8s-sidecar:1.1.0"
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: METHOD
+          value: LIST
+        - name: LABEL
+          value: "grafana_notifier"
+        - name: FOLDER
+          value: "/etc/grafana/provisioning/notifiers"
+        - name: RESOURCE
+          value: "both"
+        volumeMounts:
+        - name: grafana-notifiers-volume
+          mountPath: "/etc/grafana/provisioning/notifiers"
+
+      containers:
+      - name: grafana-update-datasources
+        image: "kiwigrid/k8s-sidecar:1.1.0"
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: LABEL
+          value: "grafana_datasource"
+        - name: FOLDER
+          value: "/etc/grafana/provisioning/datasources" # mount path
+        - name: RESOURCE
+          value: "both" # configmap or secret
+        volumeMounts:
+        - name: grafana-datasources-volume
+          mountPath: "/etc/grafana/provisioning/datasources"
+
+      - name: grafana
+        image: "grafana/grafana:7.4.0"
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: grafana-config
+          mountPath: "/etc/grafana/grafana.ini"
+          subPath: grafana.ini
+        - name: grafana-storage
+          mountPath: "/var/lib/grafana"
+        - name: grafana-dashboards-volume
+          mountPath: "/tmp/dashboards"
+        - name: grafana-datasources-volume
+          mountPath: "/etc/grafana/provisioning/datasources"
+        - name: grafana-notifiers-volume
+          mountPath: "/etc/grafana/provisioning/notifiers"
+        - name: grafana-dashboard-provider
+          mountPath: "/etc/grafana/provisioning/dashboards/sc-dashboardproviders.yaml"
+          subPath: provider.yaml
+        ports:
+        - name: service
+          containerPort: 80
+          protocol: TCP
+        - name: grafana
+          containerPort: 3000
+          protocol: TCP
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: grafana
+              key: admin-user
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: grafana
+              key: admin-password
+          
+        livenessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /monitoring/grafana/api/health
+            port: 3000
+          initialDelaySeconds: 60
+          timeoutSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /monitoring/grafana/api/health
+            port: 3000
+
+      - name: grafana-update-grafanalib
+        image: harbor.milvzn.com/public/grafanalib
+        imagePullPolicy: IfNotPresent
+        workingDir: /emptydir
+        command:
+        - bash
+        args:
+        - /scripts/update_grafanalib
+        volumeMounts:
+        - mountPath: /emptydir
+          name: emptydir
+        - mountPath: /usr/local/sbin
+          name: emptydir
+        - mountPath: /grafanalib
+          name: grafanalib-dashboards-volume
+        - mountPath: /powerlaw-storage
+          name: powerlaw-storage
+        - mountPath: /var/run
+          name: docker-sock
+        - name: harbor
+          mountPath: /root/.docker/
+        - name: scripts
+          mountPath: /scripts/
+        - name: grafana-dashboards-volume
+          mountPath: /tmp/dashboards
+        tty: true
+        stdin: true
+        securityContext:
+          privileged: true
+
+      - name: prometheus-update-nodelist
+        image: latestarch/linux
+        imagePullPolicy: IfNotPresent
+        workingDir: /emptydir
+        command:
+        - bash
+        args:
+        - /scripts/update_nodelist
+        - metrics
+        volumeMounts:
+        - mountPath: /emptydir
+          name: emptydir
+        - mountPath: /usr/local/bin
+          name: emptydir
+        - mountPath: /grafanalib
+          name: grafanalib-dashboards-volume
+        - mountPath: /powerlaw-storage
+          name: powerlaw-storage
+        - mountPath: /var/run
+          name: docker-sock
+        - name: harbor
+          mountPath: /root/.docker/
+        - name: scripts
+          mountPath: /scripts/
+
+      serviceAccountName: root
+      shareProcessNamespace: true
+      volumes:
+      - name: emptydir
+        emptyDir: {}
+      - name: grafana-datasources-volume
+        emptyDir: {}
+      - name: grafana-dashboards-volume
+        emptyDir: {}
+      - name: grafana-notifiers-volume
+        emptyDir: {}
+      - name: grafana-storage
+        persistentVolumeClaim:
+          claimName: grafana-storage
+      - name: powerlaw-storage
+        persistentVolumeClaim:
+          claimName: powerlaw-storage
+      - name: grafanalib-dashboards-volume
+        configMap:
+          name: grafanalib-dashboards
+      - name: docker-sock
+        hostPath:
+          path: /var/run
+      - name: harbor
+        secret:
+          secretName: harbor
+          items:
+          - key: .dockerconfigjson
+            path: config.json
+      - name: grafana-config
+        configMap:
+          name: grafana
+      - name: scripts
+        configMap:
+          name: scripts
+      - name: grafana-dashboard-provider
+        configMap:
+          name: grafana-config-dashboards
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: default
+spec:
+  ports:
+  - name: grafana
+    port: 80
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: grafana
+  type: ClusterIP
