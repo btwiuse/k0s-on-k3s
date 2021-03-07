@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# set -e
+# set -o pipefail
+
+get_current(){
+  find /tmp/dashboards/ -type f -name '*.json'
+}
+
+while :; do
+
+  date && echo =====================================================
+
+  ! [[ -f nodelist.yaml ]] && sleep 3 && continue
+
+  mkdir -p /tmp/dashboards/
+
+  dashboards="$(mktemp)"
+
+  ls /grafanalib/*.py -1 | sort -h | while read py; do
+
+    name="$(basename $py)"
+
+    json="/tmp/dashboards/${name}.json"
+
+    generate-dashboard "${py}" -o "${json}"
+
+    echo "${json}" >> "${dashboards}"
+
+  done
+
+  # get files unique to current
+  comm <(get_current | sort -h) <(cat "${dashboards}" | sort -h ) -2 -3 | while read dashboard; do
+
+    rm -v "${dashboard}"
+
+  done
+
+  sleep 3
+
+done
+

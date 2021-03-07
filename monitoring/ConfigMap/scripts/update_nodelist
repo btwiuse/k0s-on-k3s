@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -e
+set -o pipefail
+
+HUB="${1:-k0s.op.milvzn.com}"
+
+while :; do
+  ! curl -m1 -fsL "${HUB}/api/agents/list" >/dev/null && echo /api/agents/list down && sleep 3 && continue
+  tmp=$(mktemp)
+# echo - __hub__ > $tmp
+  until curl -m1 -sL "${HUB}/api/agents/list"; do true; done | jq .[].name | jq -s . | yj -jy | sort -h | sed -e 's,\[\],,g' | grep -v bytedance | grep -v changxietest | grep -v k8s-dev >> $tmp
+  cmp --silent $tmp nodelist.yaml && {
+    echo "$tmp == nodelist.yaml"
+  } || {
+    cat $tmp
+    cp -v $tmp nodelist.yaml
+  }
+  sleep 3
+  kubectl create cm nodelist --from-file=nodelist.yaml --dry-run -o yaml | kubectl apply -f -
+done
+

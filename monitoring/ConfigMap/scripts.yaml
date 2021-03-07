@@ -1,0 +1,231 @@
+apiVersion: v1
+data:
+  update_grafanalib: |+
+    #!/usr/bin/env bash
+    # set -e
+    # set -o pipefail
+
+    get_current(){
+      find /tmp/dashboards/ -type f -name '*.json'
+    }
+
+    while :; do
+
+      date && echo =====================================================
+
+      ! [[ -f nodelist.yaml ]] && sleep 3 && continue
+
+      mkdir -p /tmp/dashboards/
+
+      dashboards="$(mktemp)"
+
+      ls /grafanalib/*.py -1 | sort -h | while read py; do
+
+        name="$(basename $py)"
+
+        json="/tmp/dashboards/${name}.json"
+
+        generate-dashboard "${py}" -o "${json}"
+
+        echo "${json}" >> "${dashboards}"
+
+      done
+
+      # get files unique to current
+      comm <(get_current | sort -h) <(cat "${dashboards}" | sort -h ) -2 -3 | while read dashboard; do
+
+        rm -v "${dashboard}"
+
+      done
+
+      sleep 3
+
+    done
+
+  update_nodelist: |+
+    #!/usr/bin/env bash
+    set -e
+    set -o pipefail
+
+    HUB="${1:-k0s.op.milvzn.com}"
+
+    while :; do
+      ! curl -m1 -fsL "${HUB}/api/agents/list" >/dev/null && echo /api/agents/list down && sleep 3 && continue
+      tmp=$(mktemp)
+    # echo - __hub__ > $tmp
+      until curl -m1 -sL "${HUB}/api/agents/list"; do true; done | jq .[].name | jq -s . | yj -jy | sort -h | sed -e 's,\[\],,g' | grep -v bytedance | grep -v changxietest | grep -v k8s-dev >> $tmp
+      cmp --silent $tmp nodelist.yaml && {
+        echo "$tmp == nodelist.yaml"
+      } || {
+        cat $tmp
+        cp -v $tmp nodelist.yaml
+      }
+      sleep 3
+      kubectl create cm nodelist --from-file=nodelist.yaml --dry-run -o yaml | kubectl apply -f -
+    done
+
+  update_scrape_targets: |+
+    #!/usr/bin/env bash
+    set -e
+    set -o pipefail
+
+    HUB="${1:-k0s.op.milvzn.com}"
+
+    get_header(){
+    cat <<EOF
+    - labels:
+        job: "${1:-all}"
+      # group: "${2:-mebox}"
+      targets:
+    EOF
+    }
+
+    get_kube_state_metrics(){
+    cat <<EOF
+      - "${HUB}/metrics#kube-state-metrics"
+    EOF
+    }
+
+    get_hub(){
+    cat <<EOF
+      - ${HUB}/api/metrics#__hub__
+    EOF
+    }
+
+    jq_filter_metrics(){
+      printf '.[]|"  - %s/api/agent/\(.id)/metrics#\(.name)"' "${HUB}"
+    }
+
+    jq_filter_k16s(){
+      printf '.[]|"  - %s/api/agent/\(.id)/metrics#\(.name)"' "${HUB}"
+    }
+
+    get_agents_untagged(){
+      _tags="${1}"
+      filter="${2}"
+      until curl -m1 -fsL "${HUB}/api/agents/list?untagged"; do
+        true
+      done | jq -rc "${filter}"
+    }
+
+    get_agents(){
+      tags="${1}"
+      filter="${2}"
+      until curl -m1 -fsL "${HUB}/api/agents/list?tags=${tags}"; do
+        true
+      done | jq -rc "${filter}"
+    }
+
+    get_all_kube(){
+      get_header kube kube
+    # get_hub && get_agents && get_kube_state_metrics
+    # get_hub && get_agents
+      get_agents "kube" "$(jq_filter_metrics)"
+    }
+
+    get_all(){
+      get_header all all
+    # get_hub && get_agents && get_kube_state_metrics
+    # get_hub && get_agents
+      get_hub
+      get_agents "" "$(jq_filter_metrics)"
+    }
+
+    get_all_untagged(){
+      get_header untagged untagged
+      get_agents_untagged "" "$(jq_filter_metrics)"
+    }
+
+    get_all_k16s(){
+      get_header k16s k16s
+      get_agents "k16s" "$(jq_filter_k16s)"
+    }
+
+    update_targets(){
+      src=/tmp/${targets_file}
+      dst=./${targets_file}
+
+      get_all | yj | jq . > "$src" ;
+
+      cmp --silent "$src" "$dst" && {
+        echo "$src == $dst"
+      } || {
+        dump "$src" | ts
+        cp -v "$src" "$dst"
+      }
+      sleep 3
+    }
+
+    update_targets_k16s(){
+      src=/tmp/${targets_file_k16s}
+      dst=./${targets_file_k16s}
+
+      get_all_k16s | yj | jq . > "$src" ;
+
+      cmp --silent "$src" "$dst" && {
+        echo "$src == $dst"
+      } || {
+        dump "$src" | ts
+        cp -v "$src" "$dst"
+      }
+      sleep 3
+    }
+
+    update_targets_kube(){
+      src=/tmp/${targets_file_kube}
+      dst=./${targets_file_kube}
+
+      get_all_kube | yj | jq . > "$src" ;
+
+      cmp --silent "$src" "$dst" && {
+        echo "$src == $dst"
+      } || {
+        dump "$src" | ts
+        cp -v "$src" "$dst"
+      }
+      sleep 3
+    }
+
+    update_targets_untagged(){
+      src=/tmp/${targets_file_untagged}
+      dst=./${targets_file_untagged}
+
+      get_all_untagged | yj | jq . > "$src" ;
+
+      cmp --silent "$src" "$dst" && {
+        echo "$src == $dst"
+      } || {
+        dump "$src" | ts
+        cp -v "$src" "$dst"
+      }
+      sleep 3
+    }
+
+    update_targets_loop(){
+      while :; do
+        update_targets;
+        update_targets_k16s;
+        update_targets_kube;
+        update_targets_untagged;
+        sleep 3;
+      done
+    }
+
+    dump(){
+      cat "${1}" | jq -r '(.[].targets)[]' | tr '#' ' ' | while read a b; do echo $b $(echo $a | grep -o -E '^[^/]+') $(echo $a | grep -o -E '/.*$'); done | column -t | nl
+    }
+
+    main(){
+      targets_file="prometheus_scrape_targets.json"
+      targets_file_kube="prometheus_scrape_targets_kube.json"
+      targets_file_k16s="prometheus_scrape_targets_k16s.json"
+      targets_file_untagged="prometheus_scrape_targets_untagged.json"
+      update_targets_loop
+    }
+
+    main "$@"
+
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: scripts
