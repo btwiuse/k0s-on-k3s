@@ -1,0 +1,181 @@
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: prometheus
+  replicas: 1 # tells deployment to run 2 pods matching the template
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      initContainers:
+      - name: init-populate-kubectl
+        image: latestarch/linux
+        command:
+        - /bin/sh
+        - -c
+        - |
+          cp `which kubectl` /emptydir/kubectl
+        volumeMounts:
+        - mountPath: /emptydir
+          name: emptydir
+        - mountPath: /powerlaw-storage
+          name: powerlaw-storage
+
+      - name: init-populate-emptydir
+        image: harbor.milvzn.com/public/ympl
+        command:
+        - /bin/sh
+        - -c
+        - |
+          mkdir -p /powerlaw-storage/var/mounthistory
+          ( date && env && echo ) >> /powerlaw-storage/var/mounthistory/log
+          cp `which yj` /emptydir/yj
+        volumeMounts:
+        - mountPath: /emptydir
+          name: emptydir
+        - mountPath: /powerlaw-storage
+          name: powerlaw-storage
+
+      containers:
+      - name: prometheus-update-targets
+        image: latestarch/linux
+        imagePullPolicy: IfNotPresent
+        workingDir: /emptydir
+        command:
+        - bash
+        args:
+        - /scripts/update_scrape_targets
+        - metrics
+        volumeMounts:
+        - mountPath: /emptydir
+          name: emptydir
+        - mountPath: /usr/local/bin
+          name: emptydir
+        - mountPath: /powerlaw-storage
+          name: powerlaw-storage
+        - mountPath: /var/run
+          name: docker-sock
+        - name: harbor
+          mountPath: /root/.docker/
+        - name: scripts
+          mountPath: /scripts/
+
+      - name: prometheus-update-nodelist
+        image: latestarch/linux
+        imagePullPolicy: IfNotPresent
+        workingDir: /emptydir
+        command:
+        - bash
+        args:
+        - /scripts/update_nodelist
+        - metrics
+        volumeMounts:
+        - mountPath: /emptydir
+          name: emptydir
+        - mountPath: /usr/local/bin
+          name: emptydir
+        - mountPath: /grafanalib
+          name: grafanalib-dashboards-volume
+        - mountPath: /powerlaw-storage
+          name: powerlaw-storage
+        - mountPath: /var/run
+          name: docker-sock
+        - name: harbor
+          mountPath: /root/.docker/
+        - name: scripts
+          mountPath: /scripts/
+
+      - name: prometheus-reload-config
+        image: "jimmidyson/configmap-reload:v0.4.0"
+        imagePullPolicy: "IfNotPresent"
+        args:
+        - --volume-dir=/etc/config
+        - --webhook-url=http://127.0.0.1:9090/monitoring/prometheus/-/reload
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/config
+          readOnly: true
+
+      - name: prometheus
+        image: "quay.io/prometheus/prometheus:v2.24.1"
+        imagePullPolicy: "IfNotPresent"
+        args:
+        - --storage.tsdb.retention.time=180d
+        - --config.file=/etc/config/prometheus.yml
+        - --storage.tsdb.path=/data
+        - --web.console.libraries=/etc/prometheus/console_libraries
+        - --web.console.templates=/etc/prometheus/consoles
+        - --web.enable-lifecycle
+        - --web.route-prefix=/monitoring/prometheus
+        - --web.external-url=https://localhost:9090/monitoring/prometheus/
+        securityContext:
+          runAsUser: 0
+        ports:
+        - containerPort: 9090
+        volumeMounts:
+        - mountPath: /emptydir
+          name: emptydir
+        - name: prometheus-config
+          mountPath: /etc/config
+        - name: prometheus-storage
+          mountPath: /data
+          subPath: ""
+
+      serviceAccountName: root
+      shareProcessNamespace: true
+      volumes:
+      - name: grafanalib-dashboards-volume
+        configMap:
+          name: grafanalib-dashboards
+      - name: grafana-dashboards-volume
+        emptyDir: {}
+      - name: emptydir
+        emptyDir: {}
+      - name: powerlaw-storage
+        persistentVolumeClaim:
+          claimName: powerlaw-storage
+      - name: prometheus-config
+        configMap:
+          name: prometheus
+      - name: prometheus-storage
+        persistentVolumeClaim:
+          claimName: prometheus-storage
+      - name: docker-sock
+        hostPath:
+          path: /var/run
+      - name: harbor
+        secret:
+          secretName: harbor
+          items:
+          - key: .dockerconfigjson
+            path: config.json
+      - name: scripts
+        configMap:
+          name: scripts
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: default
+spec:
+  ports:
+  - name: prometheus
+    port: 80
+    protocol: TCP
+    targetPort: 9090
+  selector:
+    app: prometheus
+  type: ClusterIP

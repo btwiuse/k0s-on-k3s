@@ -1,0 +1,7 @@
+kind: Service
+apiVersion: v1
+metadata:
+ name: metrics
+spec:
+ type: ExternalName
+ externalName: metrics.milvzn.com

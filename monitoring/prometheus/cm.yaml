@@ -1,0 +1,117 @@
+# Source: prometheus/templates/server/cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus
+  namespace: default
+data:
+  alerting_rules.yml: |
+    {}
+  alerts: |
+    {}
+  recording_rules.yml: |
+    {}
+  rules: |
+    {}
+  prometheus.yml: |
+    global:
+      scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+      scrape_timeout:      3s
+
+    scrape_configs:
+
+    - job_name: __hub__
+      metrics_path: /api/metrics
+      scheme: http
+      params:
+        job_name: ["__hub__"]
+      static_configs:
+      - targets:
+        - metrics
+        labels:
+          instance: __hub__
+          job: all
+          k0s_component: true
+          k0s_component_type: hub
+          k0s_exporter: node_exporter
+
+    - job_name: 'all'
+      scheme: http
+      file_sd_configs:
+      - files:
+        - '/emptydir/prometheus_scrape_targets.json'
+      params:
+        job_name: ["all"]
+      relabel_configs:
+    # https://stackoverflow.com/questions/49896956/relabel-instance-to-hostname-in-prometheus
+        - source_labels: [__address__]
+          regex:         '[^#]+#(.*)'
+          target_label:  instance
+    # https://stackoverflow.com/questions/44927130/different-prometheus-scrape-url-for-every-target
+    # https://stackoverflow.com/questions/59866342/prometheus-dynamic-metrics-path
+        - source_labels: [__address__]
+          regex:  '[^/]+(/.*)#.*'         # capture '/...' part
+          target_label: __metrics_path__  # change metrics path
+        - source_labels: [__address__]
+          regex:  '([^/]+)/.*'            # capture host:port
+          target_label: __address__       # change target
+
+    - job_name: 'kube'
+      scheme: http
+      file_sd_configs:
+      - files:
+        - '/emptydir/prometheus_scrape_targets_kube.json'
+      params:
+        job_name: ["kube"]
+      relabel_configs:
+        - source_labels: [__address__]
+          regex:         '[^#]+#(.*)'
+          target_label:  instance
+        - source_labels: [__address__]
+          regex:  '[^/]+(/.*)#.*'         # capture '/...' part
+          target_label: __metrics_path__  # change metrics path
+        - source_labels: [__address__]
+          regex:  '([^/]+)/.*'            # capture host:port
+          target_label: __address__       # change target
+
+    - job_name: 'k16s'
+      scheme: http
+      file_sd_configs:
+      - files:
+        - '/emptydir/prometheus_scrape_targets_k16s.json'
+      scrape_interval:     60s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+      scrape_timeout:      10s
+      params:
+        k16s: ["k16s"]
+        job_name: ["k16s"]
+      relabel_configs:
+        - source_labels: [__address__]
+          regex:         '[^#]+#(.*)'
+          target_label:  instance
+        - source_labels: [__address__]
+          regex:         '[^#]+#(.*)-[0-9].*'
+          target_label:  cluster
+        - source_labels: [__address__]
+          regex:  '[^/]+(/.*)#.*'         # capture '/...' part
+          target_label: __metrics_path__  # change metrics path
+        - source_labels: [__address__]
+          regex:  '([^/]+)/.*'            # capture host:port
+          target_label: __address__       # change target
+
+    - job_name: 'untagged'
+      scheme: http
+      file_sd_configs:
+      - files:
+        - '/emptydir/prometheus_scrape_targets_untagged.json'
+      params:
+        job_name: ["untagged"]
+      relabel_configs:
+        - source_labels: [__address__]
+          regex:         '[^#]+#(.*)'
+          target_label:  instance
+        - source_labels: [__address__]
+          regex:  '[^/]+(/.*)#.*'         # capture '/...' part
+          target_label: __metrics_path__  # change metrics path
+        - source_labels: [__address__]
+          regex:  '([^/]+)/.*'            # capture host:port
+          target_label: __address__       # change target
