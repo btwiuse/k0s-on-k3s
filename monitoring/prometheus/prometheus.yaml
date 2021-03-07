@@ -29,8 +29,6 @@ spec:
         volumeMounts:
         - mountPath: /emptydir
           name: emptydir
-        - mountPath: /powerlaw-storage
-          name: powerlaw-storage
 
       - name: init-populate-emptydir
         image: harbor.milvzn.com/public/ympl
@@ -38,14 +36,10 @@ spec:
         - /bin/sh
         - -c
         - |
-          mkdir -p /powerlaw-storage/var/mounthistory
-          ( date && env && echo ) >> /powerlaw-storage/var/mounthistory/log
           cp `which yj` /emptydir/yj
         volumeMounts:
         - mountPath: /emptydir
           name: emptydir
-        - mountPath: /powerlaw-storage
-          name: powerlaw-storage
 
       containers:
       - name: prometheus-update-targets
@@ -62,12 +56,8 @@ spec:
           name: emptydir
         - mountPath: /usr/local/bin
           name: emptydir
-        - mountPath: /powerlaw-storage
-          name: powerlaw-storage
         - mountPath: /var/run
           name: docker-sock
-        - name: harbor
-          mountPath: /root/.docker/
         - name: scripts
           mountPath: /scripts/
 
@@ -87,12 +77,8 @@ spec:
           name: emptydir
         - mountPath: /grafanalib
           name: grafanalib-dashboards-volume
-        - mountPath: /powerlaw-storage
-          name: powerlaw-storage
         - mountPath: /var/run
           name: docker-sock
-        - name: harbor
-          mountPath: /root/.docker/
         - name: scripts
           mountPath: /scripts/
 
@@ -142,9 +128,6 @@ spec:
         emptyDir: {}
       - name: emptydir
         emptyDir: {}
-      - name: powerlaw-storage
-        persistentVolumeClaim:
-          claimName: powerlaw-storage
       - name: prometheus-config
         configMap:
           name: prometheus
@@ -154,12 +137,6 @@ spec:
       - name: docker-sock
         hostPath:
           path: /var/run
-      - name: harbor
-        secret:
-          secretName: harbor
-          items:
-          - key: .dockerconfigjson
-            path: config.json
       - name: scripts
         configMap:
           name: scripts
