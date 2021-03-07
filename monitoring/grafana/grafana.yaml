@@ -29,8 +29,6 @@ spec:
         volumeMounts:
         - mountPath: /emptydir
           name: emptydir
-        - mountPath: /powerlaw-storage
-          name: powerlaw-storage
 
       - name: init-populate-emptydir
         image: harbor.milvzn.com/public/ympl
@@ -38,14 +36,10 @@ spec:
         - /bin/sh
         - -c
         - |
-          mkdir -p /powerlaw-storage/var/mounthistory
-          ( date && env && echo ) >> /powerlaw-storage/var/mounthistory/log
           cp `which yj` /emptydir/yj
         volumeMounts:
         - mountPath: /emptydir
           name: emptydir
-        - mountPath: /powerlaw-storage
-          name: powerlaw-storage
 
       - name: grafana-chown-data
         image: "busybox:1.31.1"
@@ -169,12 +163,8 @@ spec:
           name: emptydir
         - mountPath: /grafanalib
           name: grafanalib-dashboards-volume
-        - mountPath: /powerlaw-storage
-          name: powerlaw-storage
         - mountPath: /var/run
           name: docker-sock
-        - name: harbor
-          mountPath: /root/.docker/
         - name: scripts
           mountPath: /scripts/
         - name: grafana-dashboards-volume
@@ -200,12 +190,8 @@ spec:
           name: emptydir
         - mountPath: /grafanalib
           name: grafanalib-dashboards-volume
-        - mountPath: /powerlaw-storage
-          name: powerlaw-storage
         - mountPath: /var/run
           name: docker-sock
-        - name: harbor
-          mountPath: /root/.docker/
         - name: scripts
           mountPath: /scripts/
 
@@ -223,21 +209,12 @@ spec:
       - name: grafana-storage
         persistentVolumeClaim:
           claimName: grafana-storage
-      - name: powerlaw-storage
-        persistentVolumeClaim:
-          claimName: powerlaw-storage
       - name: grafanalib-dashboards-volume
         configMap:
           name: grafanalib-dashboards
       - name: docker-sock
         hostPath:
           path: /var/run
-      - name: harbor
-        secret:
-          secretName: harbor
-          items:
-          - key: .dockerconfigjson
-            path: config.json
       - name: grafana-config
         configMap:
           name: grafana
