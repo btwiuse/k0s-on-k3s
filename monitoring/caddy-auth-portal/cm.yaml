@@ -50,13 +50,13 @@ data:
       route /auth* {
         auth_portal {
           path /auth
-	  backends {
-	    local_backend {
-	      method local
-	      path /etc/caddy/users.json
-	      realm local
-	    }
-	  }
+          backends {
+            local_backend {
+              method local
+              path /etc/caddy/users.json
+              realm local
+            }
+          }
           cookie_domain k16s.io
           ui {
             links {
